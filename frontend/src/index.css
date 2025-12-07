@@ -24,7 +24,7 @@
 }
 
 /* Modern Dark */
-[data-theme="dark"] {
+[data-theme="Dark"] {
   /* Backgrounds */
   --bg-primary: #0F172A;    /* Deep Slate/Navy background */
   --bg-card: #1E293B;       /* Lighter slate for cards */
@@ -44,7 +44,7 @@
 }
 
 /* Forest theme */
-[data-theme="forest"] {
+[data-theme="Forest"] {
   /* Backgrounds */
   --bg-primary: #F0FDF4;    /* Very pale mint */
   --bg-card: #FFFFFF;
@@ -64,7 +64,7 @@
 }
 
 /* Cyber tech theme */
-[data-theme="cyber"] {
+[data-theme="Cyber"] {
   /* Backgrounds */
   --bg-primary: #120B2E;    /* Deep Violet/Black */
   --bg-card: #201645;       /* Purple tinted card */
