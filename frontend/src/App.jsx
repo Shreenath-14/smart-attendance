@@ -1,4 +1,3 @@
-// frontend/src/App.jsx
 import React from "react";
 import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
@@ -8,6 +7,7 @@ import { useTheme } from "./theme/ThemeContext";
 import Header from "./components/Header";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
+import ManageSchedule from "./pages/ManageSchedule"; // ← Added
 import Settings from "./pages/Settings";
 import AddStudents from "./pages/AddStudents";
 import Login from "./pages/Login";
@@ -31,8 +31,6 @@ function RedirectToHome() {
   return <Navigate to={"/login"} />
 }
 
-
-
 const studentRoutes = [
   "/student-dashboard",
   "/student-subjects",
@@ -48,8 +46,6 @@ export default function App() {
 
   const hideNavbar = studentRoutes.includes(location.pathname);
   
-
-
   return (
     <div className="min-h-screen">
       {!hideNavbar && <Header theme={theme} setTheme={setTheme} />}
@@ -62,6 +58,7 @@ export default function App() {
           <Route path="/students" element={<StudentList/>}/>
           <Route path="/analytics" element={<Analytics/>}/>
           <Route path="/reports" element={<Reports/>}/>
+          <Route path="/manage-schedule" element={<ManageSchedule/>}/> {/* ← Added */}
           <Route path="/settings" element={<Settings/>}/>
           <Route path="/add-students" element={<AddStudents/>}/>
           <Route path="/login" element={<Login/>}/>
@@ -75,7 +72,6 @@ export default function App() {
           <Route path="/student-profile" element={<StudentProfile/>}/>
 
           <Route path="/oauth-callback" element={<OAuthCallback />} />
-
         </Routes>
       </div>
     </div>
