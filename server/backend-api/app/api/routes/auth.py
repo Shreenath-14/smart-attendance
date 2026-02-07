@@ -78,6 +78,7 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
                 "userId": created_user_id,
                 "employee_id":payload.employee_id,
                 "phone":payload.phone,
+                "branch":payload.branch,
                 "subjects": [],
                 "avatarUrl": None,
                 "department": None,
