@@ -93,9 +93,14 @@ export default function Header({ theme, setTheme }) {
 
         {/* Right: Profile section */}
         <div className="flex items-center gap-3">
-          <div className="bg-[var(--primary)] p-1.5 rounded-full cursor-pointer">
+          <button
+            type="button"
+            disabled
+            aria-label="Notifications"
+            className="bg-[var(--primary)] p-1.5 rounded-full opacity-60"
+          >
             <Bell size={16} className="text-[var(--text-on-primary)]" />
-          </div>
+          </button>
           <Link
             to="/settings"
             className="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
@@ -129,10 +134,14 @@ export default function Header({ theme, setTheme }) {
             </Link>
           ))}
           {/* Mobile-only profile link */}
-          <div className="sm:hidden flex items-center gap-2 px-4 py-2.5 border-t border-[var(--border-color)] mt-2 pt-3">
+          <Link
+            to="/settings"
+            className="sm:hidden flex items-center gap-2 px-4 py-2.5 border-t border-[var(--border-color)] mt-2 pt-3"
+            aria-label="Open settings"
+          >
             <User size={18} className="text-[var(--text-body)]" />
             <span className="text-sm font-medium text-[var(--text-main)]">{displayName}</span>
-          </div>
+          </Link>
         </nav>
       )}
     </header>
