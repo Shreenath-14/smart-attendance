@@ -1,5 +1,6 @@
-import React ,{useState,useEffect} from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   Bell,
   Download,
@@ -8,19 +9,81 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  AlertTriangle
 } from "lucide-react"; // Assuming you use lucide-react, or replace with your icons
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  // const navigate = useNavigate(); // Unused
+  const [user] = useState(() => {
+    const data = localStorage.getItem("user");
+    return data ? JSON.parse(data) : null;
+  });
+  const [mlStatus, setMlStatus] = useState("checking"); // checking, ready, waking-up
 
   useEffect(() => {
-    const data = localStorage.getItem("user");
-    if (data) {
-      setUser(JSON.parse(data));
-    }
+    const checkMlService = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        setMlStatus("waking-up");
+      }, 10000); // If pending for > 10s, it's likely waking up
+
+      try {
+        const response = await axios.get(import.meta.env.VITE_ML_SERVICE_URL, {
+          signal: controller.signal
+        });
+        console.log("ML Status Check (Dashboard):", response.status);
+        clearTimeout(timeoutId);
+        
+        if (response.status === 200) {
+          setMlStatus("ready");
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.log("Health check error:", error);
+        console.error("ML Service status check failed:", error);
+        // If it fails, assume it's waking up or down. 
+        // Render free tier might just timeout the first request or return 502 temporarily.
+        setMlStatus("waking-up");
+      }
+    };
+
+    // Initial check
+    checkMlService();
+
+    // Poll every 30 seconds
+    const interval = setInterval(checkMlService, 30000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  const getStatusBadge = () => {
+    switch (mlStatus) {
+      case "ready":
+        return (
+          <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded flex items-center gap-1">
+            <CheckCircle size={12} />
+            Face recognition is ready
+          </span>
+        );
+      case "waking-up":
+        return (
+          <span className="text-xs font-medium text-yellow-700 bg-yellow-50 px-2 py-1 rounded flex items-center gap-1">
+            <AlertTriangle size={12} />
+            Waking up ML service...
+          </span>
+        );
+      case "checking":
+      default:
+        return (
+          <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
+            <Loader2 size={12} className="animate-spin" />
+            Checking system status...
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] p-6 md:p-8">
@@ -59,13 +122,13 @@ export default function Dashboard() {
                   <p className="text-[var(--text-body)] text-sm">Monday, September 23 • 08:45</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[var(--primary-hover)] font-medium">Next class: Grade 10A • 09:00</span>
-                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full  text-[var(--primary-hover)] font-medium">Room 203</span>
+                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">Next class: Grade 10A • 09:00</span>
+                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">Room 203</span>
                 </div>
               </div>
 
               <div className="flex flex-col items-end gap-3 w-full md:w-auto">
-                <span className="text-xs font-medium text-[var(--primary)] bg-indigo-50 px-2 py-1 rounded">Face recognition is ready</span>
+                {getStatusBadge()}
                 <Link to="/attendance-session" className="w-full md:w-auto px-6 py-3 bg-[var(--primary)] text-white rounded-xl font-semibold hover:bg-[var(--primary-hover)] transition shadow-md text-center">
                   Start attendance session
                 </Link>

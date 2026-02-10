@@ -1,16 +1,20 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
+import axios from "axios";
 import { 
   Settings, 
   Clock, 
   Search, 
+  Settings as SettingsIcon, 
   Grid, 
   Play, 
   Check, 
   X, 
   MoreVertical,
   AlertCircle,
-  User
+  User,
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchMySubjects, fetchSubjectStudents } from "../api/teacher";
@@ -21,10 +25,9 @@ import api from "../api/axiosClient";
 export default function MarkAttendance() {
   const navigate = useNavigate();
   const webcamRef = useRef(null);
-  const [snap, setSnap] = useState(null);
-  const [status, setStatus] = useState("Idle");
+  
   const [activeTab, setActiveTab] = useState("Present");
-  const [isSessionActive, setIsSessionActive] = useState(true);
+  const [mlStatus, setMlStatus] = useState("checking");
 
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -34,46 +37,84 @@ export default function MarkAttendance() {
   const [attendanceMap, setAttendanceMap] = useState({});
   const [attendanceSubmitted, setAttendanceSubmitted] = useState(false);
 
+  useEffect(() => {
+    const checkMlService = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        setMlStatus("waking-up");
+      }, 10000); 
 
+      try {
+        const response = await axios.get(import.meta.env.VITE_ML_SERVICE_URL, {
+          signal: controller.signal
+        });
+        console.log("ML Status Check (MarkAttendance):", response.status);
+        clearTimeout(timeoutId);
 
-  // Simulating the fetch call you had
+        if (response.status === 200) {
+          setMlStatus("ready");
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.log("Health check error:", error);
+        console.error("ML Service status check failed:", error);
+        setMlStatus("waking-up");
+      }
+    };
+
+    checkMlService();
+    const interval = setInterval(checkMlService, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getStatusBadge = () => {
+    switch (mlStatus) {
+      case "ready":
+        return (
+          <span className="px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-green-600 rounded-full animate-pulse"></span>
+            Live • Active
+          </span>
+        );
+      case "waking-up":
+        return (
+          <span className="px-2.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-bold uppercase rounded-full flex items-center gap-1.5">
+            <AlertTriangle size={10} />
+            Waking up...
+          </span>
+        );
+      case "checking":
+      default:
+        return (
+           <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-bold uppercase rounded-full flex items-center gap-1.5">
+             <Loader2 size={10} className="animate-spin" />
+             Connecting...
+           </span>
+        );
+    }
+  };
+
   useEffect(() => {
     fetchMySubjects().then(setSubjects);
   }, []);
 
   useEffect(() => {
     if(!selectedSubject) return;
-    fetchSubjectStudents(selectedSubject).then(setStudents);
-  }, [selectedSubject])
-
-  useEffect(() => {
-    if (!students.length) return;
-
-    const initial = {};
-    students.forEach((s) => {
-      initial[s.student_id] = {
-        name: s.name,
-        roll: s.roll,
-        count: 0,
-        status: "absent",
-      };
+    fetchSubjectStudents(selectedSubject).then((data) => {
+      setStudents(data);
+      // Initialize attendance map directly here to avoid cascading render
+      const initial = {};
+      data.forEach((s) => {
+        initial[s.student_id] = {
+          name: s.name,
+          roll: s.roll,
+          count: 0,
+          status: "absent",
+        };
+      });
+      setAttendanceMap(initial);
     });
-
-    setAttendanceMap(initial);
-  }, [students]);
-
-
-  const verifiedStudents = students.filter(
-    (s) => s.verified === true
-  );
-
-  // --- Existing Functionalities ---
-  const capture = useCallback(() => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    setSnap(imageSrc);
-    // Auto-submit on capture for this demo flow
-    submitImage(imageSrc);
-  }, [webcamRef]);
+  }, [selectedSubject])
 
   useEffect(() => {
     if (!selectedSubject || !webcamRef.current) return;
@@ -85,16 +126,16 @@ export default function MarkAttendance() {
     return () => clearInterval(interval);
   }, [selectedSubject]);
 
-  const presentStudents = Object.entries(attendanceMap)
-    .filter(([_, s]) => s.status === "present")
-    .map(([id, s]) => ({
-      studentId: id,
+  const presentStudents = Object.values(attendanceMap)
+    .filter((s) => s.status === "present")
+    .map((s) => ({
+      studentId: Object.keys(attendanceMap).find(key => attendanceMap[key] === s),
       name: s.name,
       roll: s.roll,
     }));
-
+    
   const absentStudents = Object.entries(attendanceMap)
-    .filter(([_, s]) => s.status === "absent")
+    .filter(([, s]) => s.status === "absent")
     .map(([id, s]) => ({
       studentId: id,
       name: s.name,
@@ -124,37 +165,37 @@ export default function MarkAttendance() {
 
   useEffect(() => {
     if (!detections.length) return;
+    
+    // Wrap in setTimeout to avoid synchronous state update warning (Cascading update)
+    const timeoutId = setTimeout(() => {
+      setAttendanceMap((prev) => {
+        const updated = { ...prev };
+        let hasChanges = false;
 
-    setAttendanceMap((prev) => {
-      const updated = { ...prev };
+        detections.forEach((f) => {
+          if (f.status !== "present" || !f.student) return;
 
-      detections.forEach((f) => {
-        if (f.status !== "present" || !f.student) return;
+          const id = f.student.id;
 
-        const id = f.student.id;
+          if (!updated[id]) return;
 
-        if (!updated[id]) return;
+          // increment detection count
+          updated[id].count += 1;
+          
+          hasChanges = true;
 
-        // increment detection count
-        updated[id].count += 1;
+          // mark present after 3 confirmations
+          if (updated[id].count >= 3) {
+            updated[id].status = "present";
+          }
+        });
 
-        // mark present after 3 confirmations
-        if (updated[id].count >= 3) {
-          updated[id].status = "present";
-        }
+        return hasChanges ? updated : prev;
       });
-
-      return updated;
-    });
-    console.log("Detections:", detections);
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
   }, [detections]);
-
-
-
-
-
-
-  // -------------------------------
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] p-6 md:p-8">
@@ -208,10 +249,7 @@ export default function MarkAttendance() {
           <div className="lg:col-span-8 space-y-3">
             <div className="flex justify-between items-center px-1">
               <h3 className="font-semibold text-[var(--text-main)]">Camera feed</h3>
-              <span className="px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-green-600 rounded-full animate-pulse"></span>
-                Live • Active
-              </span>
+              {getStatusBadge()}
             </div>
 
             <div className="relative bg-black rounded-2xl overflow-hidden aspect-video shadow-sm group">
@@ -223,7 +261,6 @@ export default function MarkAttendance() {
                 mirrored={true}
                 className="w-full h-full object-cover"
               />
-
 
               {/* REAL FACE OVERLAY */}
               <FaceOverlay faces={detections} videoRef={webcamRef} />
@@ -238,12 +275,6 @@ export default function MarkAttendance() {
                    <button className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition backdrop-blur-md">
                      <Grid size={20} />
                    </button>
-                   {/* <button 
-                     onClick={capture}
-                     className="p-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl shadow-lg hover:scale-105 transition active:scale-95"
-                   >
-                     <Play size={24} fill="currentColor" />
-                   </button> */}
                 </div>
               </div>
             </div>
@@ -265,13 +296,13 @@ export default function MarkAttendance() {
                   onClick={() => setActiveTab("Present")}
                   className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${activeTab === "Present" ? "bg-[var(--primary)] text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                 >
-                  Present (32)
+                  Present ({presentStudents.length})
                 </button>
                 <button 
                   onClick={() => setActiveTab("All")}
                   className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${activeTab === "All" ? "bg-[var(--primary)] text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                 >
-                  All students (45)
+                  All students ({students.length})
                 </button>
               </div>
 
@@ -326,7 +357,6 @@ export default function MarkAttendance() {
                   </div>
                 ))}
             </div>
-
 
             {/* Sticky Footer */}
             <div className="p-4 border-t border-gray-100 bg-gray-50">

@@ -30,8 +30,13 @@ logger = logging.getLogger(APP_NAME)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await ensure_attendance_daily_indexes()
-    logger.info("attendance_daily indexes ensured")
+    try:
+        await ensure_attendance_daily_indexes()
+        logger.info("attendance_daily indexes ensured")
+    except Exception as e:
+        logger.warning(f"Could not connect to MongoDB. Application will continue, but DB features will fail. Error: {e}")
+        logger.warning("Please check your MONGO_URI in .env")
+
     yield
     await ml_client.close()
     logger.info("ML client closed")
