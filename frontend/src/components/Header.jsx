@@ -1,53 +1,149 @@
 import React, { useEffect, useState } from "react";
-import { Bell, User, ChevronDown } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Bell, User, ChevronDown, Menu, X } from "lucide-react";
 
-export default function Header() {
-    const [user, setUser] = useState(null)
+/** Navigation link definitions for the main header. */
+const navLinks = [
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/attendance", label: "Attendance" },
+  { to: "/students", label: "Students" },
+  { to: "/analytics", label: "Analytics" },
+  { to: "/reports", label: "Reports" },
+  { to: "/manage-schedule", label: "Schedule" },
+];
 
-    useEffect(()=>{
-        try{
-            const storedData = localStorage.getItem("user");
-            if(!storedData){
-                setUser(null);
-                return;
-            }
-            const parsed = JSON.parse(storedData);
-            setUser(parsed);
-        } catch(e){
-            console.error("Failed to parse user from local storage", e);
-            setUser(null);
-        }
-    }, []);
+/**
+ * Header component responsible for rendering the main navigation bar.
+ *
+ * @param {Object} props
+ * @param {"light"|"dark"} props.theme - The current theme.
+ * @param {Function} props.setTheme - Callback to update the theme.
+ * @returns {React.ReactElement} The rendered header.
+ */
+export default function Header({ theme, setTheme }) {
+  const [user, setUser] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
 
-    const displayName = user?.name || user?.email || "Guest";
+  useEffect(() => {
+    try {
+      const storedData = localStorage.getItem("user");
+      if (!storedData) { setUser(null); return; }
+      setUser(JSON.parse(storedData));
+    } catch (e) {
+      console.error("Failed to parse user from local storage", e);
+      setUser(null);
+    }
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  const displayName = user?.name || user?.email || "Guest";
+
+  /**
+   * Checks whether the given path matches the current route.
+   *
+   * @param {string} path - The route path to check.
+   * @returns {boolean} True if the path is the current route.
+   */
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <>
-    <div className="w-full h-16 flex items-center justify-start px-6 bg-[var(--bg-card)] gap-2" role="navigation">
-        <div className="logo-section flex items-center gap-4">
-            <img className="w-14 h-14 rounded-full" src="logo.png" alt="" />
-            <h1 className="text-2xl font-semibold text-[var(--text-main)]">Smart Attendance</h1>
+    <header className="sticky top-0 z-50 w-full bg-[var(--bg-card)] border-b border-[var(--border-color)] shadow-sm">
+      {/* Main bar */}
+      <div className="flex items-center justify-between h-16 px-4 md:px-6">
+        {/* Left: Logo + toggle */}
+        <div className="flex items-center gap-3">
+          {/* Mobile toggle button */}
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="lg:hidden p-2 rounded-lg text-[var(--text-body)] hover:bg-[var(--bg-secondary)] transition-colors"
+            aria-label="Toggle navigation"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+
+          <Link to="/dashboard" className="flex items-center gap-3">
+            <img className="w-10 h-10 rounded-full" src="/logo.png" alt="Logo" />
+            <h1 className="text-xl font-bold text-[var(--text-main)] hidden sm:block">Smart Attendance</h1>
+          </Link>
         </div>
-        <div className="nav-links text-gray-500 gap-1 ml-10">
-            <a href="/" className="mx-2 font-semibold hover:text-[var(--primary)] hover:bg-[var(--primary-hover)] py-2 px-3 rounded-4xl">Dashboard</a>
-            <a href="/attendance" className="mx-2 font-semibold hover:text-[var(--primary)] hover:bg-[var(--primary-hover)] py-2 px-3 rounded-4xl">Attendance</a>
-            <a href="/students" className="mx-2 font-semibold hover:text-[var(--primary)] hover:bg-[var(--primary-hover)] py-2 px-3 rounded-4xl">Student</a>
-            <a href="/analytics" className="mx-2 font-semibold hover:text-[var(--primary)] hover:bg-[var(--primary-hover)] py-2 px-3 rounded-4xl">Analytics</a>
-            <a href="/reports" className="mx-2 font-semibold hover:text-[var(--primary)] hover:bg-[var(--primary-hover)] py-2 px-3 rounded-4xl">Reports</a>
-            <a href="/manage-schedule" className="mx-2 font-semibold hover:text-[var(--primary)] hover:bg-[var(--primary-hover)] py-2 px-3 rounded-4xl">ManageSchedule</a>
+
+        {/* Center: Desktop nav links */}
+        <nav className="hidden lg:flex items-center gap-1">
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                isActive(link.to)
+                  ? "text-[var(--primary)] bg-[var(--primary-hover)]/20"
+                  : "text-[var(--text-body)] hover:text-[var(--primary)] hover:bg-[var(--bg-secondary)]"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Right: Profile section */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled
+            aria-label="Notifications"
+            className="bg-[var(--primary)] p-1.5 rounded-full opacity-60"
+          >
+            <Bell size={16} className="text-[var(--text-on-primary)]" />
+          </button>
+          <Link
+            to="/settings"
+            className="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
+            aria-label="Open settings"
+          >
+            <User size={20} className="text-[var(--text-body)]" />
+            <span className="text-sm font-medium text-[var(--text-main)]">{displayName}</span>
+            <ChevronDown size={16} className="text-[var(--text-body)]" />
+          </Link>
         </div>
-        <div className="profile-section flex items-center gap-5 text-gray-500 ml-auto justify-end">
-            <div className="bell bg-[var(--primary)] p-1 rounded-full">
-                <Bell className="text-[var(--text-on-primary)] cursor-pointer p-0.5"/>
-            </div>
-            
-            <User className="rounded-full" />
-            <div className="user flex items-center gap-1.5">
-                <span className="user-name text-[var(--text-main)]">{displayName || "John doe"}</span>
-                <a href="/settings"><ChevronDown className="cursor-pointer p-1" /></a>
-            </div>
-        </div>
-    </div>
-      
-    </>
-  );}
+      </div>
+
+      {/* Mobile nav drawer */}
+      {menuOpen && (
+        <nav
+          id="mobile-nav"
+          aria-label="Mobile navigation"
+          className="lg:hidden border-t border-[var(--border-color)] bg-[var(--bg-card)] px-4 pb-4 pt-2 space-y-1 animate-in slide-in-from-top"
+        >
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`block px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                isActive(link.to)
+                  ? "text-[var(--primary)] bg-[var(--primary-hover)]/20"
+                  : "text-[var(--text-body)] hover:text-[var(--primary)] hover:bg-[var(--bg-secondary)]"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+          {/* Mobile-only profile link */}
+          <Link
+            to="/settings"
+            className="sm:hidden flex items-center gap-2 px-4 py-2.5 border-t border-[var(--border-color)] mt-2 pt-3"
+            aria-label="Open settings"
+          >
+            <User size={18} className="text-[var(--text-body)]" />
+            <span className="text-sm font-medium text-[var(--text-main)]">{displayName}</span>
+          </Link>
+        </nav>
+      )}
+    </header>
+  );
+}
