@@ -1,11 +1,9 @@
 import motor.motor_asyncio
-import os
-from dotenv import load_dotenv
+from app.core.config import settings
 
-load_dotenv()
+MONGO_URI = settings.MONGO_URI
+MONGO_DB = "smart_attendance" 
 
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_DB = os.getenv("MONGO_DB", "smart_attendance")
-
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URI)
+print(f"Connecting to MONGO_URI: {MONGO_URI}")
+client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 db = client[MONGO_DB]

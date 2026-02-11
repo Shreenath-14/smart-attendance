@@ -153,6 +153,7 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
 
 @router.post("/login", response_model=UserResponse)
 async def login(payload: LoginRequest):
+    print(f"Login request received for email: {payload.email}")
     email = payload.email
     password = payload.password
     

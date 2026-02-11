@@ -1,9 +1,14 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from typing import List
 
-load_dotenv()
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent
+
+# Load .env from root
+load_dotenv(BASE_DIR / ".env")
 
 APP_NAME = "Smart Attendance API"
 
@@ -21,12 +26,12 @@ ORIGINS: List[str] = (
 
 
 class Settings(BaseSettings):
-    MONGO_URI: str = ""
-    JWT_SECRET: str = ""
+    MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "")
     JWT_ALGORITHM: str = "HS256"
 
     class Config:
-        env_file = ".env"
+        env_file = str(BASE_DIR / ".env")
         extra = "ignore"
 
 
