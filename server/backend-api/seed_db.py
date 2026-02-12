@@ -20,7 +20,7 @@ async def seed():
     # Connect
     uri = "mongodb://localhost:27017"
     client = AsyncIOMotorClient(uri)
-    db = client["smart_attendance"]
+    db = client["smart-attendance"]
 
     logger.info("Seeding database...")
 
