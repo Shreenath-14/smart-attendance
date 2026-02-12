@@ -89,6 +89,63 @@ async def seed():
     else:
         logger.info(f"Teacher {teacher_email} already exists.")
 
+    # --- Seed Subjects (Create if not exist) ---
+    student_user = await db.users.find_one({"email": student_email})
+    student_doc = await db.students.find_one({"userId": student_user["_id"]})
+    teacher_user = await db.users.find_one({"email": teacher_email})
+    teacher_doc = await db.teachers.find_one({"userId": teacher_user["_id"]})
+
+    subjects_data = [
+        {"name": "Mathematics", "code": "MTH101", "type": "Core"},
+        {"name": "Physics", "code": "PHY101", "type": "Lab"},
+        {"name": "Chemistry", "code": "CHM101", "type": "Theory"},
+        {"name": "Computer Science", "code": "CS101", "type": "Elective"}
+    ]
+
+    for sub in subjects_data:
+        existing_sub = await db.subjects.find_one({"code": sub["code"]})
+        if not existing_sub:
+             logger.info(f"Creating subject: {sub['name']}")
+             
+             # Create subject with enrollment
+             sub_doc = {
+                 "name": sub["name"],
+                 "code": sub["code"],
+                 "type": sub["type"],
+                 "professor_ids": [teacher_doc["_id"]],
+                 "students": [
+                     {
+                         "student_id": student_doc["_id"],
+                         "name": student_user["name"],
+                         "verified": True,
+                         "attendance": {
+                             "present": 20,
+                             "absent": 5,
+                             "total": 25,
+                             "percentage": 80.0
+                         }
+                     }
+                 ],
+                 "created_at": datetime.now(timezone.utc)
+             }
+             res = await db.subjects.insert_one(sub_doc)
+             sub_id = res.inserted_id
+
+             # Update Student with subject
+             await db.students.update_one(
+                 {"_id": student_doc["_id"]},
+                 {"$addToSet": {"subjects": sub_id}}
+             )
+             
+             # Update Teacher with subject
+             await db.teachers.update_one(
+                 {"_id": teacher_doc["_id"]},
+                 {"$addToSet": {"subjects": sub_id}}
+             )
+        else:
+            logger.info(f"Subject {sub['name']} already exists.")
+
+
     logger.info("Seeding complete!")
     client.close()
 
