@@ -135,9 +135,6 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
         verify_link,
     )
 
-    token = create_jwt(
-        user_id=str(created_user_id), role=payload.role, email=payload.email
-    )
     logger.info(f"User registered successfully: {payload.email}")
 
     return {
@@ -146,8 +143,6 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
         "role": payload.role,
         "name": payload.name,
         "college_name": payload.college_name,
-        "token": token,
-        "token": "" # No token returned to enforce verification
     }
 
 
@@ -198,16 +193,22 @@ async def verify_email(token: str = Query(...)):
         if expires_at and expires_at < datetime.now(UTC):
             raise HTTPException(status_code=400, detail="Verification link expired")
 
+    # await db.users.update_one(
+    #     {"_id": user["_id"]},
+    #     {
+    #         "$set": {"is_verified": True},
+    #         "$unset": {"verification_token": "", "verification_expiry": ""},  # nosec
+    #     },
+    # )
+
     await db.users.update_one(
         {"_id": user["_id"]},
         {
             "$set": {"is_verified": True},
-            "$unset": {"verification_token": "", "verification_expiry": ""},  # nosec
+            "$unset": {"verification_token": "", "verification_expiry": ""},
         },
     )
 
-    return {"message": "Email verified successfully. You can now log in.."}
-    
     FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
     return RedirectResponse(url=f"{FRONTEND_BASE_URL}/login?verified=true")
 
@@ -261,8 +262,6 @@ async def google_callback(request: Request):
         )
 
     if not user.get("is_verified", False):
-        raise HTTPException(
-            status_code=403, detail="Please verify your email before logging in."
         # Auto-verify user if logging in via Google
         await db.users.update_one(
             {"_id": user["_id"]},
