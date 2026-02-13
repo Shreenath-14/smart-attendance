@@ -15,11 +15,14 @@ from app.schemas.responses import HealthResponse
 from app.api.routes.face_recognition import router as ml_router
 
 # New Imports
+from prometheus_fastapi_instrumentator import Instrumentator
 from .core.logging import setup_logging
 from .core.error_handlers import smart_attendance_exception_handler, generic_exception_handler
 from .core.exceptions import SmartAttendanceException
 from .middleware.correlation import CorrelationIdMiddleware
 from .middleware.timing import TimingMiddleware
+
+from .api.routes.health import router as health_router
 
 # Setup logging
 setup_logging()
@@ -65,11 +68,15 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(ml_router)
+    app.include_router(health_router, tags=["Health"])
     
     return app
 
 
 app = create_app()
+
+# Instrumentator
+Instrumentator().instrument(app).expose(app)
 
 
 @app.get("/", tags=["Root"])
@@ -80,30 +87,6 @@ async def root():
         "version": settings.SERVICE_VERSION,
         "status": "running"
     }
-
-
-@app.get("/health", response_model=HealthResponse, tags=["Health"])
-async def health():
-    """Health check endpoint"""
-    uptime = time.time() - service_start_time
-
-    # Check if ML dependencies are available (MediaPipe, OpenCV, NumPy)
-    models_loaded = True
-    try:
-        import cv2
-        import mediapipe as mp
-        import numpy as np
-    except ImportError:
-        models_loaded = False
-
-    return HealthResponse(
-        status="healthy" if models_loaded else "degraded",
-        service=settings.SERVICE_NAME,
-        version=settings.SERVICE_VERSION,
-        models_loaded=models_loaded,
-        uptime_seconds=uptime
-    )
-
 
 # Run the service
 if __name__ == "__main__":

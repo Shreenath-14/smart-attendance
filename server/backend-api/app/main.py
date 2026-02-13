@@ -19,11 +19,14 @@ from app.services.attendance_daily import (
 from app.services.ml_client import ml_client
 
 # New Imports
+from prometheus_fastapi_instrumentator import Instrumentator
 from .core.logging import setup_logging
 from .core.error_handlers import smart_attendance_exception_handler, generic_exception_handler
 from .core.exceptions import SmartAttendanceException
 from .middleware.correlation import CorrelationIdMiddleware
 from .middleware.timing import TimingMiddleware
+
+from .api.routes.health import router as health_router
 
 load_dotenv()
 
@@ -94,11 +97,15 @@ def create_app() -> FastAPI:
     app.include_router(students_router)
     app.include_router(attendance_router)
     app.include_router(settings_router.router)
+    app.include_router(health_router, tags=["Health"])
 
     return app
 
 
 app = create_app()
+
+# Instrumentator
+Instrumentator().instrument(app).expose(app)
 
 # Optional: run directly with `python -m app.main`
 if __name__ == "__main__":
