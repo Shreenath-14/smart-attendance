@@ -312,6 +312,7 @@ export default function ForgotPassword() {
           For security, this link and OTP will expire after a short time. You can always request a new code if needed.
         </p>
 
+
         <p className="mt-4 text-center text-base text-[var(--text-body)]">
           Remembered your password?{" "}
           <Link to="/login" className="font-semibold text-[var(--primary)] hover:underline">
