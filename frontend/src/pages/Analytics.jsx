@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
   Download, 
   FileText, 
@@ -60,8 +60,26 @@ const CLASS_BREAKDOWN = [
 export default function Analytics() {
   const [selectedPeriod, setSelectedPeriod] = useState("Month");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const periodOptions = ["Week", "Month", "Semester"];
+
+  // Handle outside click to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
@@ -144,7 +162,7 @@ export default function Analytics() {
             </div>
             <div className="flex gap-2 items-center">
               {/* Dropdown Container */}
-              <div className="relative">
+              <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="text-sm text-gray-600 flex items-center gap-1 hover:bg-gray-50 px-3 py-1.5 rounded border border-gray-200 transition"
@@ -172,7 +190,7 @@ export default function Analytics() {
                   </div>
                 )}
               </div>
-              <button className="text-sm text-[var(--primary)] font-medium hover:underline">Reset</button>
+              <button onClick={() => setSelectedPeriod("Month")} className="text-sm text-[var(--primary)] font-medium hover:underline">Reset</button>
             </div>
           </div>
 
