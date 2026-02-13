@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect ,useRef} from "react";
 import {
   Plus,
-  Copy,
-  Sun,
   Calendar as CalendarIcon,
   RefreshCw,
   Folder,
@@ -15,6 +13,8 @@ import {
   Save,
   Eye,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { getSettings, updateSettings } from "../api/schedule";
 import Spinner from "../components/Spinner";
@@ -31,12 +31,65 @@ export default function ManageSchedule() {
   const [saveTemplateNotification, setSaveTemplateNotification] =
     useState(null);
   const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const yearScrollRef = useRef(null);
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const years = Array.from({ length: 201 }, (_, i) => 1900 + i);
 
-  const calendarDays = Array.from({ length: 35 }, (_, i) => {
-    const day = i - 2;
-    return day > 0 && day <= 30 ? day : "";
-  });
+
+  const getCalendarDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 = Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const daysArray = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      daysArray.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      daysArray.push(i);
+    }
+    return daysArray;
+  };
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const handleMonthSelect = (monthIndex) => {
+    const newDate = new Date(currentDate.getFullYear(), monthIndex, 1);
+    setCurrentDate(newDate);
+    setIsPickerOpen(false);
+  };
+
+  const handleYearSelect = (year) => {
+    const newDate = new Date(year, currentDate.getMonth(), 1);
+    setCurrentDate(newDate);
+    setIsPickerOpen(false); 
+  };
+  const togglePicker = () => {
+    setIsPickerOpen(!isPickerOpen);
+    if (!isPickerOpen) {
+      setTimeout(() => {
+        if (yearScrollRef.current) {
+          const selected = yearScrollRef.current.querySelector('[data-selected="true"]');
+          if (selected) {
+            selected.scrollIntoView({ block: "center", behavior: "smooth" });
+          }
+        }
+      }, 100);
+    }
+  };
+
+  const formatMonthYear = (date) => {
+    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+  };
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
@@ -155,12 +208,10 @@ export default function ManageSchedule() {
       setScheduleData((prev) => prev.filter((item) => item.id !== id));
     }
   };
-
   const openEditModal = (cls) => {
     setCurrentClass({ ...cls });
     setIsEditModalOpen(true);
   };
-
   const saveEditedClass = () => {
     setScheduleData((prev) =>
       prev.map((item) => (item.id === currentClass.id ? currentClass : item)),
@@ -525,58 +576,103 @@ export default function ManageSchedule() {
             </div>
           </div>
 
-          {/* RIGHT SECTION: CALENDAR OVERVIEW (Span 4) */}
+          {/* RIGHT SECTION: CALENDAR OVERVIEW*/}
           <div className="xl:col-span-4 space-y-6">
-            {/* Calendar Container */}
             <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-sm">
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-[var(--text-main)]">
                   Calendar overview
                 </h3>
-                <p className="text-sm text-[var(--text-body)]">
-                  Drag to adjust special days and exceptions
-                </p>
+                <p className="text-sm text-[var(--text-body)]">Manage holidays and events</p>
+              </div>
+              <div className="flex items-center justify-between mb-4 bg-[var(--bg-secondary)] p-1 rounded-xl">
+                 <button onClick={handlePrevMonth} className="p-2 hover:bg-[var(--bg-card)] hover:text-[var(--primary)] rounded-lg transition text-[var(--text-body)]">
+                    <ChevronLeft size={18} />
+                 </button>
+
+                 <div className="relative">
+                    <button 
+                      onClick={togglePicker}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[var(--bg-card)] transition font-bold text-[var(--text-main)]"
+                    >
+                      {formatMonthYear(currentDate)}
+                      <ChevronDown size={14} className={`transition-transform duration-200 ${isPickerOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {isPickerOpen && (
+                      <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl shadow-2xl z-50 w-[340px] p-4 animate-in zoom-in-95 duration-100">
+                        <div className="flex gap-4 h-[280px]">
+                           {/* Left: Months */}
+                           <div className="flex-1 overflow-y-auto">
+                              <h4 className="text-xs font-bold text-[var(--text-body)] uppercase mb-2 sticky top-0 bg-[var(--bg-card)]">Month</h4>
+                              <div className="grid grid-cols-1 gap-1">
+                                {months.map((m, idx) => (
+                                  <button 
+                                    key={m} 
+                                    type="button"
+                                    onClick={() =>
+                                       handleMonthSelect(idx)}
+                                    className={`text-sm px-3 py-1.5 rounded-lg text-left transition ${currentDate.getMonth() === idx ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--bg-secondary)]"}`}
+                                  >
+                                    {m}
+                                  </button>
+                                ))}
+                              </div>
+                           </div>
+
+                           {/* Divider */}
+                           <div className="w-[1px] bg-[var(--border-color)] h-full"></div>
+                           <div className="w-24 overflow-y-auto custom-scrollbar" ref={yearScrollRef}>
+                              <h4 className="text-xs font-bold text-[var(--text-body)] uppercase mb-2 sticky top-0 bg-[var(--bg-card)]">Year</h4>
+                              <div className="space-y-1">
+                                {years.map((year) => (
+                                  <button 
+                                    key={year} 
+                                    type="button"
+                                    data-selected={currentDate.getFullYear() === year}
+                                    onClick={() => handleYearSelect(year)}
+                                    className={`block w-full text-sm px-2 py-1.5 rounded-lg text-center transition ${currentDate.getFullYear() === year ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--bg-secondary)]"}`}
+                                  >
+                                    {year}
+                                  </button>
+                                ))}
+                              </div>
+                           </div>
+                        </div>
+                        
+                        {/* Footer Close */}
+                        <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                           <button 
+                             onClick={() => setIsPickerOpen(false)}
+                             className="w-full py-1.5 text-xs font-bold text-[var(--primary)] hover:bg-[var(--bg-secondary)] rounded-lg"
+                           >
+                             Close
+                           </button>
+                        </div>
+                      </div>
+                    )}
+                 </div>
+
+                 <button onClick={handleNextMonth} className="p-2 hover:bg-[var(--bg-card)] hover:text-[var(--primary)] rounded-lg transition text-[var(--text-body)]">
+                    <ChevronRight size={18} />
+                 </button>
               </div>
 
-              {/* Month Selector */}
-              <div className="flex items-center gap-2 mb-4 cursor-pointer hover:bg-[var(--bg-secondary)] w-fit px-2 py-1 rounded transition">
-                <span className="font-semibold text-[var(--text-main)]">
-                  September 2025
-                </span>
-                <ChevronDown size={16} className="text-[var(--text-body)]" />
-              </div>
-
-              {/* Calendar Grid */}
+              {/* CALENDAR GRID */}
               <div className="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-sm mb-2">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-                  <span
-                    key={d}
-                    className="text-xs font-medium text-[var(--text-body)]"
-                  >
-                    {d}
-                  </span>
+                  <span key={d} className="text-xs font-medium text-[var(--text-body)]">{d}</span>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-2 text-sm">
-                {calendarDays.map((day, idx) => {
-                  let cellClass =
-                    "h-8 w-8 flex items-center justify-center rounded-lg text-[var(--text-main)] hover:bg-[var(--bg-secondary)] cursor-pointer transition";
-
-                  if (day === 1)
-                    cellClass =
-                      "h-8 w-8 flex items-center justify-center rounded-lg bg-[var(--primary)] text-white font-bold shadow-md";
-                  // Selected
-                  else if ([4, 10, 11, 17, 22, 26].includes(day))
-                    cellClass =
-                      "h-8 w-8 flex items-center justify-center rounded-lg bg-emerald-500 text-white font-medium shadow-sm";
-                  // Active/Green
-                  else if (day === 12 || day === 25)
-                    cellClass =
-                      "h-8 w-8 flex items-center justify-center rounded-lg bg-[var(--primary)] text-white font-medium opacity-60"; // Blueish
-
+                {getCalendarDays().map((day, idx) => {
+                  if(!day) return <div key={idx} className="h-8 w-8"/>;
+                  const today = new Date();
+                  const isToday = day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
                   return (
                     <div key={idx} className="flex justify-center">
-                      <span className={cellClass}>{day}</span>
+                      <span className={`h-8 w-8 flex items-center justify-center rounded-lg transition cursor-pointer ${isToday ? "bg-[var(--primary)] text-white font-bold shadow-md" : "text-[var(--text-main)] hover:bg-[var(--bg-secondary)]"}`}>
+                        {day}
+                      </span>
                     </div>
                   );
                 })}
