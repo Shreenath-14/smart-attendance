@@ -7,7 +7,7 @@ import os
 from app.utils.jwt_token import create_jwt
 from urllib.parse import quote
 
-from ...schemas.auth import RegisterRequest, UserResponse, LoginRequest
+from ...schemas.auth import RegisterRequest, UserResponse, LoginRequest, RegisterResponse
 from ...core.security import hash_password, verify_password
 
 # from ...core.email import send_verification_email
