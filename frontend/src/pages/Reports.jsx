@@ -75,7 +75,7 @@ export default function Reports() {
     };
   });
 
-  sort handleSort = (key) => {
+  const handleSort = (key) => {
     let direction = 'asc';
 
     if (sortConfig.direction === 'desc'){
