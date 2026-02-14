@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Mail,
   Send,
@@ -24,6 +25,7 @@ import { getStudents } from "../api/students";
 import Spinner from "../components/Spinner";
 
 export default function Messaging() {
+  const navigate = useNavigate();
   const [user] = useState(() => {
     try {
       const data = localStorage.getItem("user");
@@ -66,6 +68,13 @@ export default function Messaging() {
     message_title: "",
     message_body: "",
   });
+
+  // Redirect if user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      navigate("/login", { replace: true });
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     loadStudents();

@@ -64,6 +64,13 @@ async def send_low_attendance_warnings(
     if current_user.get("role") != "teacher":
         raise HTTPException(status_code=403, detail="Only teachers can send notifications")
 
+    # Validate warnings list size to prevent DoS
+    if len(warnings) > 200:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot send more than 200 warnings at once"
+        )
+
     teacher_id = str(current_user["id"])
 
     # Convert warnings to dict format

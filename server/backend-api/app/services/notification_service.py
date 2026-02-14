@@ -56,8 +56,13 @@ class NotificationService:
             "metadata": metadata or {}
         }
 
-        result = await db.email_logs.insert_one(log_entry)
-        return str(result.inserted_id)
+        try:
+            result = await db.email_logs.insert_one(log_entry)
+            return str(result.inserted_id)
+        except Exception as e:
+            # Log the DB error but don't propagate to avoid aborting email sends
+            logger.error(f"Failed to log email to database: {str(e)}")
+            return None
 
     @staticmethod
     async def send_absence_notifications(
