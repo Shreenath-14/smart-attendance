@@ -101,6 +101,20 @@ export default function StudentList() {
     }
   };
 
+  // Derive Top Performers and Needs Support
+  const studentsWithAttendance = verifiedStudents.map(student => ({
+    ...student,
+    attendancePercentage: calculateAttendancePercentage(student)
+  }));
+  
+  const topPerformers = [...studentsWithAttendance]
+    .sort((a, b) => b.attendancePercentage - a.attendancePercentage)
+    .slice(0, 3);
+
+  const needsSupport = [...studentsWithAttendance]
+    .sort((a, b) => a.attendancePercentage - b.attendancePercentage)
+    .slice(0, 3);
+
   return (
     <div className="space-y-6">
       
@@ -350,49 +364,44 @@ export default function StudentList() {
           </div>
 
           {/* Card 2: Top Performers */}
-          <div className="bg-[var(--bg-card)] p-5 rounded-xl border border-[var(--border-color)] shadow-sm">
-            <h3 className="font-semibold text-[var(--text-main)] mb-1">Top performers</h3>
-            <p className="text-xs text-[var(--text-body)] mb-4">Students with best attendance this term</p>
-            
-            <div className="space-y-4">
-              {[
-                { name: "Aarav Patel", val: "96%" }, 
-                { name: "Sophia Lee", val: "92%" }, 
-                { name: "Emma Wilson", val: "89%" }
-              ].map((s, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-xs font-bold">{i+1}</div>
-                    <span className="text-sm font-medium text-[var(--text-body)]">{s.name}</span>
+          {topPerformers.length > 0 && (
+            <div className="bg-[var(--bg-card)] p-5 rounded-xl border border-gray-100 shadow-sm">
+              <h3 className="font-semibold text-[var(--text-main)] mb-1">Top performers</h3>
+              <p className="text-xs text-[var(--text-body)] mb-4">Students with best attendance this term</p>
+              
+              <div className="space-y-4">
+                {topPerformers.map((s, i) => (
+                  <div key={s._id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">{i+1}</div>
+                      <span className="text-sm font-medium text-gray-700">{s.name}</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">{s.attendancePercentage}%</span>
                   </div>
-                  <span className="text-sm font-bold text-[var(--text-main)]">{s.val}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Card 3: Needs Support */}
-          <div className="bg-[var(--bg-card)] p-5 rounded-xl border border-[var(--border-color)] shadow-sm">
-            <h3 className="font-semibold text-[var(--text-main)] mb-1">Needs support</h3>
-            <p className="text-xs text-[var(--text-body)] mb-4">Students with the lowest attendance</p>
-            
-            <div className="space-y-4">
-              {[
-                { name: "Noah Smith", val: "58%" }, 
-                { name: "Liam Garcia", val: "64%" }, 
-                { name: "Mohammed Ali", val: "72%" }
-              ].map((s, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[var(--danger)]/10 text-[var(--danger)] flex items-center justify-center text-xs font-bold">{i+1}</div>
-                    <span className="text-sm font-medium text-[var(--text-body)]">{s.name}</span>
+          {needsSupport.length > 0 && (
+            <div className="bg-[var(--bg-card)] p-5 rounded-xl border border-gray-100 shadow-sm">
+              <h3 className="font-semibold text-[var(--text-main)] mb-1">Needs support</h3>
+              <p className="text-xs text-[var(--text-body)] mb-4">Students with the lowest attendance</p>
+              
+              <div className="space-y-4">
+                {needsSupport.map((s, i) => (
+                  <div key={s._id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">{i+1}</div>
+                      <span className="text-sm font-medium text-gray-700">{s.name}</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">{s.attendancePercentage}%</span>
                   </div>
-                  <span className="text-sm font-bold text-[var(--text-main)]">{s.val}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-
+          )}
         </div>
 
       </div>
