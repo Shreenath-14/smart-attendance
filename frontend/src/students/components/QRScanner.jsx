@@ -30,10 +30,10 @@ export default function QRScanner({ onScanSuccess, onScanError, onClose }) {
       (decodedText, decodedResult) => {
         // Success
         scanner.clear().then(() => {
-           onScanSuccess(decodedText, decodedResult);
+          onScanSuccess(decodedText, decodedResult);
         }).catch(err => {
-            console.error("Failed to clear scanner", err);
-            onScanSuccess(decodedText, decodedResult);
+          console.error("Failed to clear scanner", err);
+          onScanSuccess(decodedText, decodedResult);
         });
       },
       (error) => {
