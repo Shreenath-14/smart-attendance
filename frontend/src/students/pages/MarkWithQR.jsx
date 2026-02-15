@@ -73,12 +73,8 @@ export default function MarkWithQR() {
                 longitude: lng,
             });
 
-            if (response.data.ok) {
-                setStatus("success");
-            } else {
-                setStatus("error");
-                setErrorMsg(response.data.message || "Failed to mark attendance.");
-            }
+            // If the request did not throw, treat it as a success based on HTTP status
+            setStatus("success");
         } catch (error) {
             setStatus("error");
             setErrorMsg(error.response?.data?.detail || "An error occurred while submitting attendance.");
