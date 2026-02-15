@@ -201,10 +201,22 @@ async def add_subject(payload: dict, current: dict = Depends(get_current_teacher
     if not name or not code:
         raise HTTPException(status_code=400, detail="Name and Code required")
 
+    # Extract location if provided
+    location = None
+    if payload.get("latitude") and payload.get("longitude"):
+        try:
+            lat = float(payload["latitude"])
+            lng = float(payload["longitude"])
+            rad = float(payload.get("radius", 50))  # Default 50m
+            location = {"lat": lat, "long": lng, "radius": rad}
+        except (ValueError, TypeError):
+            pass  # Ignore invalid numbers
+
     subject = await add_subject_for_teacher(
         current["id"],
         name.strip(),
         code.strip().upper(),
+        location=location,
     )
 
     return serialize_bson(subject)
