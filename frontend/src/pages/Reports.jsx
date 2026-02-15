@@ -7,12 +7,14 @@ import {
   Filter,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Loader2
 } from "lucide-react";
 import { fetchMySubjects, fetchSubjectStudents } from "../api/teacher";
 import DateRange from '../components/DateRange.jsx';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from "react-i18next";
+import { toast } from "react-hot-toast";
 
 
 export default function Reports() {
@@ -23,6 +25,7 @@ export default function Reports() {
   const [students, setStudents] = useState([]);
   const [startDate, setStartDate] = useState(new Date());
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+  const [loading, setLoading] = useState(false);
 
   // Fetch Subjects on Mount
   useEffect(() => {
@@ -136,6 +139,130 @@ export default function Reports() {
     return <ArrowDown size={14} className="text-[var(--primary)]" />;
   };
 
+  // Handle Export PDF
+  const handleExportPDF = async () => {
+    if (!selectedSubject) {
+      toast.error(t('reports.errors.select_subject') || "Please select a subject first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 30);
+      
+      const params = new URLSearchParams({
+        subject_id: selectedSubject,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      });
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reports/export/pdf?${params}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "attendance_report.pdf";
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(t('reports.success.pdf_exported') || "PDF downloaded successfully!");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error(t('reports.errors.pdf_failed') || "Failed to export PDF. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Export CSV
+  const handleExportCSV = async () => {
+    if (!selectedSubject) {
+      toast.error(t('reports.errors.select_subject') || "Please select a subject first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 30);
+      
+      const params = new URLSearchParams({
+        subject_id: selectedSubject,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      });
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reports/export/csv?${params}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to download CSV");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "attendance_report.csv";
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(t('reports.success.csv_exported') || "CSV downloaded successfully!");
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      toast.error(t('reports.errors.csv_failed') || "Failed to export CSV");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -147,12 +274,20 @@ export default function Reports() {
           <p className="text-[var(--text-body)]">{t('reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 bg-[var(--bg-secondary)] text-[var(--text-main)] border border-[var(--border-color)] rounded-lg hover:bg-[var(--bg-card)] font-medium flex items-center gap-2 shadow-sm transition cursor-pointer">
-            <FileText size={18} />
+          <button 
+            onClick={handleExportCSV}
+            disabled={loading || !selectedSubject}
+            className="px-4 py-2 bg-[var(--bg-secondary)] text-[var(--text-main)] border border-[var(--border-color)] rounded-lg hover:bg-[var(--bg-card)] font-medium flex items-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
             {t('reports.export_csv')}
           </button>
-          <button className="px-4 py-2 bg-[var(--primary)] text-[var(--text-on-primary)] rounded-lg hover:opacity-90 font-medium flex items-center gap-2 shadow-sm transition cursor-pointer">
-            <Download size={18} />
+          <button 
+            onClick={handleExportPDF}
+            disabled={loading || !selectedSubject}
+            className="px-4 py-2 bg-[var(--primary)] text-[var(--text-on-primary)] rounded-lg hover:opacity-90 font-medium flex items-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
              {t('reports.export_pdf')}
           </button>
         </div>
