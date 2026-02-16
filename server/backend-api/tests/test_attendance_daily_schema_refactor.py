@@ -11,7 +11,6 @@ async def test_save_daily_summary_schema_refactor():
     mock_db.__getitem__.return_value = mock_collection
     mock_collection.update_one = AsyncMock()
 
-    class_id = ObjectId()
     subject_id = ObjectId()
     teacher_id = ObjectId()
     record_date = "2026-02-11"
@@ -44,8 +43,10 @@ async def test_save_daily_summary_schema_refactor():
         # 2. Verify Update: Should set daily.{date}
         assert f"daily.{record_date}" in update_doc["$set"]
         daily_summary = update_doc["$set"][f"daily.{record_date}"]
+        assert daily_summary["teacherId"] == teacher_id
         assert daily_summary["present"] == present
         assert daily_summary["absent"] == absent
+        assert daily_summary["late"] == late
         assert daily_summary["total"] == present + absent + late
         assert daily_summary["percentage"] == round(10 / 13 * 100, 2)
         

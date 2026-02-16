@@ -41,8 +41,8 @@ async def save_daily_summary(
 
     update_doc = {
         "$set": {
-            "teacherId": teacher_id,
             daily_key: {
+                "teacherId": teacher_id,
                 "present": present,
                 "absent": absent,
                 "late": late,
