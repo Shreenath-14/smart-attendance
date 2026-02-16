@@ -27,17 +27,31 @@ export default function StudentForecast() {
   // Simple linear projection for the demo
   // Formula: (Present + New) / (Total + New) * 100
   const presentSoFar = (currentAttendance / 100) * totalClassesSoFar;
-  const projectedScore = Math.round(
-    ((presentSoFar + classesToAttend) / (totalClassesSoFar + classesToAttend)) * 100
-  );
+  const denom = totalClassesSoFar + classesToAttend;
+  const projectedScore = denom > 0
+    ? Math.round(((presentSoFar + classesToAttend) / denom) * 100)
+    : 0;
 
   const isEligible = projectedScore >= 75;
-  const classesNeeded = isEligible ? 0 : 3; // Mock value logic
+  const TARGET = 0.75;
+
+  const classesNeeded = (() => {
+    if (totalClassesSoFar <= 0) return 0;
+
+    // minimum x such that (presentSoFar + x)/(totalClassesSoFar + x) >= 0.75
+    const safePresent = Math.min(presentSoFar, totalClassesSoFar);
+    const neededRaw = (TARGET * totalClassesSoFar - safePresent) / (1 - TARGET);
+
+    return Math.max(0, Math.ceil(neededRaw));
+  })();
+
+  const canReachWithinSlider = classesNeeded <= futureClassesMax;
+
 
   // Chart Data
   const chartData = [
-    { name: "Score", value: projectedScore, color: isEligible ? "#10B981" : "#F59E0B" },
-    { name: "Remaining", value: 100 - projectedScore, color: "#E5E7EB" },
+    { name: "Score", value: projectedScore, color: isEligible ? "#10B981" : "#EF4444" },
+    { name: "Remaining", value: Math.max(0, 100 - projectedScore), color: "#E5E7EB" },
   ];
 
   return (
@@ -72,7 +86,7 @@ export default function StudentForecast() {
           
           {/* Header */}
           <div className="flex items-center gap-3 mb-2">
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
               <ArrowLeft size={20} />
             </button>
             <div>
@@ -107,7 +121,7 @@ export default function StudentForecast() {
                 <h3 className="text-lg font-bold text-slate-800">{t('forecast.simulation.title')}</h3>
                 <p className="text-xs text-slate-500">{t('forecast.simulation.subtitle')}</p>
               </div>
-              <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">
+              <span className="bg-indigo-100 text-indigo-700 font-bold px-4 py-1.5 rounded-full text-xs tracking-wide">
                 {t('forecast.simulation.badge')}
               </span>
             </div>
@@ -116,12 +130,12 @@ export default function StudentForecast() {
             <div className="space-y-4">
               <div className="flex justify-between text-sm font-medium">
                 <span className="text-slate-600">{t('forecast.simulation.slider_label')}</span>
-                <span className="text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{t('forecast.simulation.classes_count', {count: classesToAttend})}</span>
+                <span className="text-indigo-600 bg-indigo-100 px-4 py-1.5 rounded-full font-medium">{t('forecast.simulation.classes_count', {count: classesToAttend})}</span>
               </div>
               
               <div className="relative h-2 bg-gray-100 rounded-full">
                 <div 
-                  className="absolute top-0 left-0 h-full bg-indigo-600 rounded-full transition-all duration-150" 
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-150" 
                   style={{width: `${(classesToAttend / futureClassesMax) * 100}%`}}
                 ></div>
                 <input 
@@ -149,8 +163,8 @@ export default function StudentForecast() {
                   <PieChart>
                     <Pie
                       data={chartData}
-                      innerRadius={50}
-                      outerRadius={60}
+                      innerRadius={45}
+                      outerRadius={65}
                       startAngle={90}
                       endAngle={-270}
                       dataKey="value"
@@ -163,7 +177,7 @@ export default function StudentForecast() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className={`text-2xl font-bold ${isEligible ? 'text-emerald-600' : 'text-amber-500'}`}>
+                  <span className={`text-2xl font-bold ${isEligible ? 'text-emerald-600' : 'text-red-500'}`}>
                     {projectedScore}%
                   </span>
                   <span className="text-[10px] text-gray-400 uppercase font-medium">
@@ -182,19 +196,22 @@ export default function StudentForecast() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-gray-500 text-xs">{t('forecast.simulation.after_attending')}</p>
-                    <p className={`font-bold ${isEligible ? 'text-emerald-600' : 'text-amber-500'}`}>
+                    <p className={`font-bold ${isEligible ? 'text-emerald-600' : 'text-red-500'}`}>
                       {projectedScore}%
                     </p>
                   </div>
                   <div className="col-span-2 pt-2 border-t border-gray-50 flex justify-between items-center">
                     <p className="text-gray-500 text-xs">{t('forecast.simulation.needed_for_75')}</p>
-                    <p className="font-bold text-slate-800">{t('forecast.simulation.more_classes', {count: classesNeeded})}</p>
+                    <p className="font-bold text-slate-800">{canReachWithinSlider
+                      ? t('forecast.simulation.more_classes', { count: classesNeeded })
+                      : `${classesNeeded}+`}
+                    </p>
                   </div>
                 </div>
 
                 {/* Eligibility Pill */}
                 <div className={`rounded-xl p-4 flex items-start gap-3 ${
-                  isEligible ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"
+                  isEligible ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
                 }`}>
                   {isEligible ? <CheckCircle size={20} className="mt-0.5" /> : <AlertCircle size={20} className="mt-0.5" />}
                   <div>
@@ -212,7 +229,7 @@ export default function StudentForecast() {
               </div>
             </div>
 
-            <p className="text-[10px] text-gray-400 text-center pt-4 border-t border-gray-50">
+            <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-50">
               {t('forecast.simulation.disclaimer')}
             </p>
 
