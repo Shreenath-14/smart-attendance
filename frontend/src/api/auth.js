@@ -20,3 +20,18 @@ export const fetchCurrentUser = async () => {
     }
   }
 };
+
+export const forgotPassword = async (email) => {
+  const res = await api.post("/auth/forgot-password", { email });
+  return res.data;
+};
+
+export const resetPassword = async (email, otp, newPassword) => {
+  return (
+    await api.post("/auth/reset-password", {
+      email,
+      otp,
+      new_password: newPassword,
+    })
+  ).data;
+};
