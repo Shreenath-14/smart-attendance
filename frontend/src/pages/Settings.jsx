@@ -380,10 +380,10 @@ export default function Settings() {
                         key={mode}
                         onClick={() => setTheme(mode)}
                         className={`flex items-center gap-2 px-6 py-3 rounded-xl border font-medium transition-all ${theme === mode
-                            ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
-                            : "border-[var(--border-color)] hover:bg-[var(--bg-secondary)] text-[var(--text-body)]"
+                          ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
+                          : "border-[var(--border-color)] hover:bg-[var(--bg-secondary)] text-[var(--text-body)]"
                           }`}
-                        onClick={() => setTheme(mode)}
+
                       >
                         {mode === "Light" && <Sun size={18} />}
                         {mode === "Dark" && <Moon size={18} />}
