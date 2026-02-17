@@ -38,9 +38,11 @@ export default function OAuthCallback() {
 
     // Save as your normal login flow does
     try {
-      // Clear all existing session data before storing new session
-      // This ensures no residual data from previous accounts remains
-      localStorage.clear();
+      // Clear existing authentication-related data before storing new session
+      // This ensures no residual auth data from previous accounts remains
+      localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
 
       localStorage.setItem("token", token);
       if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
