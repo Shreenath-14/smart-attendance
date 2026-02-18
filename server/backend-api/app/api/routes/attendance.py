@@ -313,12 +313,15 @@ async def confirm_attendance(payload: Dict):
 
     today = date.today().isoformat()
 
-    # Mark PRESENT students
+    # Mark PRESENT students - increment total AND present
     if present_oids:
         await db.subjects.update_one(
             {"_id": subject_oid},
             {
-                "$inc": {"students.$[p].attendance.present": 1},
+                "$inc": {
+                    "students.$[p].attendance.total": 1,
+                    "students.$[p].attendance.present": 1,
+                },
                 "$set": {"students.$[p].attendance.lastMarkedAt": today},
             },
             array_filters=[
@@ -329,12 +332,15 @@ async def confirm_attendance(payload: Dict):
             ],
         )
 
-    # Mark ABSENT students
+    # Mark ABSENT students - increment total AND absent
     if absent_oids:
         await db.subjects.update_one(
             {"_id": subject_oid},
             {
-                "$inc": {"students.$[a].attendance.absent": 1},
+                "$inc": {
+                    "students.$[a].attendance.total": 1,
+                    "students.$[a].attendance.absent": 1,
+                },
                 "$set": {"students.$[a].attendance.lastMarkedAt": today},
             },
             array_filters=[
@@ -344,6 +350,35 @@ async def confirm_attendance(payload: Dict):
                 }
             ],
         )
+
+    # Update percentage for all modified students
+    # Fetch the subject to get updated student records
+    updated_subject = await db.subjects.find_one(
+        {"_id": subject_oid}, {"students": 1}
+    )
+
+    if updated_subject:
+        # Calculate and update percentages for students with attendance marked
+        all_modified_student_ids = present_oids + absent_oids
+        
+        for student in updated_subject.get("students", []):
+            student_id = student.get("student_id")
+            if student_id not in all_modified_student_ids:
+                continue
+            
+            attendance = student.get("attendance", {})
+            total = attendance.get("total", 0)
+            present = attendance.get("present", 0)
+            
+            # Calculate percentage
+            percentage = round((present / total) * 100, 2) if total > 0 else 0
+            
+            # Update percentage in database
+            await db.subjects.update_one(
+                {"_id": subject_oid, "students.student_id": student_id},
+                {"$set": {"students.$[s].attendance.percentage": percentage}},
+                array_filters=[{"s.student_id": student_id}],
+            )
 
     # --- Write daily attendance summary ---
     teacher_id = (
